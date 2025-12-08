@@ -1,0 +1,62 @@
+{
+  "name": "WorkNote",
+  "type": "object",
+  "properties": {
+    "flat_id": {
+      "type": "string",
+      "description": "ID of the flat this note belongs to"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Plumbing",
+        "Flooring",
+        "Electrical",
+        "Painting",
+        "Carpentry",
+        "Civil",
+        "Finishing",
+        "Snag List",
+        "Other"
+      ],
+      "default": "Other"
+    },
+    "title": {
+      "type": "string",
+      "description": "Short title of the note"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of work/issue"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "In Progress",
+        "Resolved",
+        "Verified"
+      ],
+      "default": "Pending"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "Low",
+        "Medium",
+        "High",
+        "Critical"
+      ],
+      "default": "Medium"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Optional photo of the work"
+    }
+  },
+  "required": [
+    "flat_id",
+    "title",
+    "category"
+  ]
+}

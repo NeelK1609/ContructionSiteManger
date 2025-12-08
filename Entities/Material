@@ -1,0 +1,58 @@
+{
+  "name": "Material",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the material (e.g., Cement, Sand)"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Cement",
+        "Sand",
+        "Bricks",
+        "Steel",
+        "Tiles",
+        "Paint",
+        "Hardware",
+        "Plumbing",
+        "Electrical",
+        "Wood",
+        "Other"
+      ],
+      "default": "Other"
+    },
+    "quantity": {
+      "type": "number",
+      "description": "Current stock quantity"
+    },
+    "unit": {
+      "type": "string",
+      "enum": [
+        "Bags",
+        "Kg",
+        "Ton",
+        "Sq.ft",
+        "Pieces",
+        "Liters",
+        "Meters",
+        "Boxes"
+      ],
+      "default": "Pieces"
+    },
+    "min_stock_level": {
+      "type": "number",
+      "description": "Minimum stock before alert"
+    },
+    "location": {
+      "type": "string",
+      "description": "Storage location on site"
+    }
+  },
+  "required": [
+    "name",
+    "quantity",
+    "unit"
+  ]
+}

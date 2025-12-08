@@ -1,0 +1,44 @@
+{
+  "name": "MaterialTransaction",
+  "type": "object",
+  "properties": {
+    "material_id": {
+      "type": "string",
+      "description": "ID of the material"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "Usage",
+        "Restock",
+        "Wastage",
+        "Return"
+      ],
+      "default": "Usage",
+      "description": "Type of transaction"
+    },
+    "quantity": {
+      "type": "number",
+      "description": "Quantity involved in transaction (always positive value)"
+    },
+    "flat_id": {
+      "type": "string",
+      "description": "Optional: ID of the flat where material was used"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional details or reason"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of transaction"
+    }
+  },
+  "required": [
+    "material_id",
+    "type",
+    "quantity",
+    "date"
+  ]
+}
