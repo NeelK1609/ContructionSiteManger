@@ -1,69 +1,76 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { base44, type FlatStatus, type NewRecord, type WorkNote } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Filter, RefreshCw } from "lucide-react";
-import { Link } from 'react-router-dom';
+import { Plus, ArrowLeft } from "lucide-react";
+import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import NoteCard from "@/components/flats/NoteCard";
+import { CATEGORIES as NOTE_CATEGORIES } from "@/components/flats/NoteForm";
 import NoteForm from "@/components/flats/NoteForm";
 
 export default function FlatDetailsPage() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const flatId = urlParams.get('id');
+  const [searchParams] = useSearchParams();
+  const flatId = searchParams.get('id') ?? '';
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [editingNote, setEditingNote] = useState(null);
+  const [editingNote, setEditingNote] = useState<WorkNote | null>(null);
 
   const { data: flat, isLoading: flatLoading } = useQuery({
     queryKey: ['flat', flatId],
-    queryFn: async () => {
-      const res = await base44.entities.Flat.list({ id: flatId });
-      return res[0];
-    },
+    queryFn: async () => (await base44.entities.Flat.get(flatId)) ?? null,
     enabled: !!flatId
   });
 
-  const { data: notes, isLoading: notesLoading } = useQuery({
-    queryKey: ['notes', flatId],
-    queryFn: () => base44.entities.WorkNote.filter({ flat_id: flatId }),
+  const { data: notes = [] } = useQuery({
+    queryKey: ['notes', 'flat', flatId],
+    queryFn: () => base44.entities.WorkNote.filter({ flat_id: flatId }, '-created_date'),
     enabled: !!flatId,
-    initialData: []
   });
 
+  const invalidateNotes = () => queryClient.invalidateQueries({ queryKey: ['notes'] });
+
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.WorkNote.create(data),
+    mutationFn: (data: NewRecord<WorkNote>) => base44.entities.WorkNote.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['notes', flatId]);
+      invalidateNotes();
       setIsCreateOpen(false);
     }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.WorkNote.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<NewRecord<WorkNote>> }) => base44.entities.WorkNote.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['notes', flatId]);
+      invalidateNotes();
       setEditingNote(null);
     }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.WorkNote.delete(id),
-    onSuccess: () => queryClient.invalidateQueries(['notes', flatId])
+    mutationFn: (id: string) => base44.entities.WorkNote.delete(id),
+    onSuccess: invalidateNotes
   });
 
   const updateFlatStatusMutation = useMutation({
-    mutationFn: (status) => base44.entities.Flat.update(flatId, { status }),
-    onSuccess: () => queryClient.invalidateQueries(['flat', flatId])
+    mutationFn: (status: FlatStatus) => base44.entities.Flat.update(flatId, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['flat', flatId] });
+      queryClient.invalidateQueries({ queryKey: ['flats'] });
+    }
   });
 
-  if (flatLoading) return <div className="p-8">Loading flat details...</div>;
-  if (!flat) return <div className="p-8">Flat not found</div>;
-
-  const categories = ["All", "Plumbing", "Flooring", "Electrical", "Painting", "Carpentry", "Other"];
+  if (flatId && flatLoading) return <div className="p-8">Loading flat details...</div>;
+  if (!flat) {
+    return (
+      <div className="p-8 space-y-4">
+        <p>Flat not found.</p>
+        <Link to={createPageUrl('Flats')} className="text-orange-600 hover:underline">Back to Flats</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -75,17 +82,19 @@ export default function FlatDetailsPage() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-4xl font-bold text-slate-900">{flat.flat_number}</h1>
-            <Badge variant="outline" className="text-lg py-1 px-3 bg-slate-50">
-              Block {flat.block}
-            </Badge>
+            {flat.block && (
+              <Badge variant="outline" className="text-lg py-1 px-3 bg-slate-50">
+                Block {flat.block}
+              </Badge>
+            )}
           </div>
           <p className="text-slate-500 mt-2">
             Status: <span className="font-medium text-slate-900">{flat.status}</span>
           </p>
         </div>
         
-        <div className="flex gap-2">
-          {flat.status !== 'Completed' && (
+        <div className="flex flex-wrap gap-2">
+          {flat.status !== 'Completed' && flat.status !== 'Handed Over' && (
              <Button variant="outline" onClick={() => updateFlatStatusMutation.mutate('Completed')}>
                Mark as Completed
              </Button>
@@ -112,7 +121,7 @@ export default function FlatDetailsPage() {
 
       <Tabs defaultValue="All" className="w-full">
         <TabsList className="w-full justify-start overflow-x-auto bg-transparent border-b h-auto p-0 rounded-none space-x-2">
-          {categories.map(cat => (
+          {["All", ...NOTE_CATEGORIES].map(cat => (
             <TabsTrigger 
               key={cat} 
               value={cat}
@@ -123,7 +132,7 @@ export default function FlatDetailsPage() {
           ))}
         </TabsList>
         
-        {categories.map(cat => (
+        {["All", ...NOTE_CATEGORIES].map(cat => (
           <TabsContent key={cat} value={cat} className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {notes

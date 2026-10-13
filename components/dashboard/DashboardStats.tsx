@@ -1,8 +1,15 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { Flat, Material, WorkNote } from "@/api/base44Client";
+import { Card, CardContent } from "@/components/ui/card";
 import { Package, ClipboardList, AlertTriangle, CheckCircle2 } from "lucide-react";
 
-export default function DashboardStats({ materials = [], flats = [], notes = [] }) {
+interface DashboardStatsProps {
+  materials?: Material[];
+  flats?: Flat[];
+  notes?: WorkNote[];
+}
+
+export default function DashboardStats({ materials = [], flats = [], notes = [] }: DashboardStatsProps) {
   const lowStockCount = materials.filter(m => m.quantity <= (m.min_stock_level || 0)).length;
   const activeFlats = flats.filter(f => f.status === 'In Progress').length;
   const pendingNotes = notes.filter(n => n.status === 'Pending').length;

@@ -8,15 +8,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import MaterialForm from "./MaterialForm";
 import MaterialTransactionForm from "./MaterialTransactionForm";
 import { History } from "lucide-react";
+import type { Flat, Material, MaterialTransaction, NewRecord } from "@/api/base44Client";
 
-export default function MaterialList({ materials, flats, onUpdate, onDelete, onTransaction, onViewHistory }) {
+interface MaterialListProps {
+  materials: Material[];
+  flats: Flat[];
+  onUpdate: (id: string, data: NewRecord<Material>) => void;
+  onDelete: (id: string) => void;
+  onTransaction: (data: NewRecord<MaterialTransaction>) => void;
+  onViewHistory: (material: Material) => void;
+}
+
+export default function MaterialList({ materials, flats, onUpdate, onDelete, onTransaction, onViewHistory }: MaterialListProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [editingMaterial, setEditingMaterial] = useState(null);
-  const [transactingMaterial, setTransactingMaterial] = useState(null);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+  const [transactingMaterial, setTransactingMaterial] = useState<Material | null>(null);
 
-  const filteredMaterials = materials.filter(m => 
-    m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    m.category.toLowerCase().includes(searchTerm.toLowerCase())
+  const term = searchTerm.toLowerCase();
+  const filteredMaterials = materials.filter(m =>
+    m.name.toLowerCase().includes(term) ||
+    (m.category ?? "").toLowerCase().includes(term)
   );
 
   return (
@@ -69,7 +80,7 @@ export default function MaterialList({ materials, flats, onUpdate, onDelete, onT
                   </TableCell>
                   <TableCell className="text-slate-500">{material.location || '-'}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                       <Button 
                         variant="ghost" 
                         size="sm" 

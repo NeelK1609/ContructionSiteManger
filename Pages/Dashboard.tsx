@@ -9,23 +9,23 @@ import { createPageUrl } from '@/utils';
 import { ArrowRight, Activity, TrendingUp } from "lucide-react";
 
 export default function DashboardPage() {
-  const { data: materials } = useQuery({
+  const { data: materials = [] } = useQuery({
     queryKey: ['materials'],
     queryFn: () => base44.entities.Material.list(),
-    initialData: [],
   });
 
-  const { data: flats } = useQuery({
+  const { data: flats = [] } = useQuery({
     queryKey: ['flats'],
     queryFn: () => base44.entities.Flat.list(),
-    initialData: [],
   });
 
-  const { data: recentNotes } = useQuery({
-    queryKey: ['recent_notes'],
-    queryFn: () => base44.entities.WorkNote.list('-created_date', 5),
-    initialData: [],
+  const { data: notes = [] } = useQuery({
+    queryKey: ['notes', 'all'],
+    queryFn: () => base44.entities.WorkNote.list('-created_date'),
   });
+
+  const recentNotes = notes.slice(0, 5);
+  const lowStockMaterials = materials.filter(m => m.quantity <= (m.min_stock_level || 0));
 
   return (
     <div>
@@ -34,7 +34,7 @@ export default function DashboardPage() {
         <p className="text-slate-500 mt-1">Welcome back. Here's what's happening on site today.</p>
       </div>
 
-      <DashboardStats materials={materials} flats={flats} notes={recentNotes} />
+      <DashboardStats materials={materials} flats={flats} notes={notes} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity / Notes */}
@@ -93,8 +93,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {materials
-                .filter(m => m.quantity <= (m.min_stock_level || 0))
+              {lowStockMaterials
                 .slice(0, 5)
                 .map(item => (
                   <div key={item.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
@@ -104,7 +103,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ))}
-               {materials.filter(m => m.quantity <= (m.min_stock_level || 0)).length === 0 && (
+               {lowStockMaterials.length === 0 && (
                  <div className="flex flex-col items-center justify-center py-8 text-center">
                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
                      <TrendingUp className="w-6 h-6 text-green-600" />

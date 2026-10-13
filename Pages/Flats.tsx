@@ -1,9 +1,8 @@
 import React from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter } from "lucide-react";
+import { Search } from "lucide-react";
 import FlatCard from "@/components/flats/FlatCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -11,19 +10,19 @@ export default function FlatsPage() {
   const [search, setSearch] = React.useState("");
   const [blockFilter, setBlockFilter] = React.useState("all");
 
-  const { data: flats, isLoading: flatsLoading } = useQuery({
+  const { data: flats = [], isLoading } = useQuery({
     queryKey: ['flats'],
-    queryFn: () => base44.entities.Flat.list(),
-    initialData: [],
+    queryFn: () => base44.entities.Flat.list('flat_number'),
   });
 
-  const { data: notes, isLoading: notesLoading } = useQuery({
-    queryKey: ['notes'],
-    queryFn: () => base44.entities.WorkNote.filter({ status: 'Pending' }), // Get pending notes to show counts
-    initialData: [],
+  const { data: notes = [] } = useQuery({
+    queryKey: ['notes', 'all'],
+    queryFn: () => base44.entities.WorkNote.list('-created_date'),
   });
 
-  const getIssueCount = (flatId) => notes.filter(n => n.flat_id === flatId).length;
+  // Open issues = anything not yet resolved or verified
+  const getIssueCount = (flatId: string) =>
+    notes.filter(n => n.flat_id === flatId && (n.status === 'Pending' || n.status === 'In Progress')).length;
 
   const filteredFlats = flats.filter(flat => {
     const matchesSearch = flat.flat_number.toLowerCase().includes(search.toLowerCase());
@@ -31,7 +30,7 @@ export default function FlatsPage() {
     return matchesSearch && matchesBlock;
   });
 
-  const uniqueBlocks = [...new Set(flats.map(f => f.block))].sort();
+  const uniqueBlocks = [...new Set(flats.map(f => f.block).filter((b): b is string => !!b))].sort();
 
   return (
     <div className="space-y-6">
@@ -66,15 +65,24 @@ export default function FlatsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filteredFlats.map(flat => (
-          <FlatCard 
-            key={flat.id} 
-            flat={flat} 
-            issueCount={getIssueCount(flat.id)} 
-          />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="py-12 text-center text-slate-400">Loading flats...</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredFlats.map(flat => (
+            <FlatCard
+              key={flat.id}
+              flat={flat}
+              issueCount={getIssueCount(flat.id)}
+            />
+          ))}
+          {filteredFlats.length === 0 && (
+            <div className="col-span-full py-12 text-center text-slate-400 border-2 border-dashed rounded-xl">
+              No flats match your search
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

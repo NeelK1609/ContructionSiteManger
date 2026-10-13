@@ -1,5 +1,5 @@
 import React from "react";
-import { base44 } from "@/api/base44Client";
+import { base44, type Material, type MaterialTransaction, type NewRecord } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -10,69 +10,61 @@ import MaterialHistory from "@/components/materials/MaterialHistory";
 
 export default function MaterialsPage() {
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
-  const [historyMaterial, setHistoryMaterial] = React.useState(null);
+  const [historyMaterial, setHistoryMaterial] = React.useState<Material | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: materials, isLoading } = useQuery({
+  const { data: materials = [], isLoading } = useQuery({
     queryKey: ['materials'],
-    queryFn: () => base44.entities.Material.list(),
-    initialData: [],
+    queryFn: () => base44.entities.Material.list('name'),
   });
 
-  const { data: flats } = useQuery({
+  const { data: flats = [] } = useQuery({
     queryKey: ['flats'],
-    queryFn: () => base44.entities.Flat.list(),
-    initialData: [],
+    queryFn: () => base44.entities.Flat.list('flat_number'),
   });
 
-  const { data: historyTransactions, isLoading: historyLoading } = useQuery({
+  const { data: historyTransactions = [], isLoading: historyLoading } = useQuery({
     queryKey: ['material_history', historyMaterial?.id],
-    queryFn: () => base44.entities.MaterialTransaction.filter({ material_id: historyMaterial.id }),
+    queryFn: () => base44.entities.MaterialTransaction.filter({ material_id: historyMaterial!.id }, '-date'),
     enabled: !!historyMaterial,
-    initialData: []
   });
+
+  const invalidateMaterials = () => queryClient.invalidateQueries({ queryKey: ['materials'] });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Material.create(data),
+    mutationFn: (data: NewRecord<Material>) => base44.entities.Material.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['materials']);
+      invalidateMaterials();
       setIsCreateOpen(false);
     }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Material.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries(['materials'])
+    mutationFn: ({ id, data }: { id: string; data: Partial<NewRecord<Material>> }) => base44.entities.Material.update(id, data),
+    onSuccess: invalidateMaterials
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Material.delete(id),
-    onSuccess: () => queryClient.invalidateQueries(['materials'])
+    mutationFn: (id: string) => base44.entities.Material.delete(id),
+    onSuccess: invalidateMaterials
   });
 
   const transactionMutation = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: async (data: NewRecord<MaterialTransaction>) => {
+      // Read the latest stock rather than the cached list so quantities never drift
+      const material = await base44.entities.Material.get(data.material_id);
+      if (!material) throw new Error('Material not found');
+
       // 1. Create the transaction record
       await base44.entities.MaterialTransaction.create(data);
-      
-      // 2. Update the parent material quantity
-      const material = materials.find(m => m.id === data.material_id);
-      if (!material) return;
 
-      let newQuantity = material.quantity;
-      if (['Usage', 'Wastage'].includes(data.type)) {
-        newQuantity -= data.quantity;
-      } else {
-        newQuantity += data.quantity;
-      }
-      
-      await base44.entities.Material.update(material.id, { quantity: newQuantity });
+      // 2. Update the parent material quantity
+      const delta = ['Usage', 'Wastage'].includes(data.type) ? -data.quantity : data.quantity;
+      await base44.entities.Material.update(material.id, { quantity: material.quantity + delta });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['materials']);
-      if (data.material_id) {
-        queryClient.invalidateQueries(['material_history', data.material_id]);
-      }
+    onSuccess: (_, variables) => {
+      invalidateMaterials();
+      queryClient.invalidateQueries({ queryKey: ['material_history', variables.material_id] });
     }
   });
 
@@ -102,7 +94,10 @@ export default function MaterialsPage() {
         </Dialog>
       </div>
 
-      <MaterialList 
+      {isLoading ? (
+        <div className="py-12 text-center text-slate-400">Loading materials...</div>
+      ) : (
+      <MaterialList
         materials={materials}
         flats={flats}
         onUpdate={(id, data) => updateMutation.mutate({ id, data })}
@@ -114,6 +109,7 @@ export default function MaterialsPage() {
         onTransaction={(data) => transactionMutation.mutate(data)}
         onViewHistory={setHistoryMaterial}
       />
+      )}
 
       <Dialog open={!!historyMaterial} onOpenChange={(open) => !open && setHistoryMaterial(null)}>
         <DialogContent className="max-w-3xl">

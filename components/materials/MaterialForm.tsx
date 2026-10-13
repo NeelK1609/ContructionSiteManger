@@ -5,13 +5,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DialogFooter } from "@/components/ui/dialog";
+import type { Material, NewRecord } from "@/api/base44Client";
 
 const CATEGORIES = ["Cement", "Sand", "Bricks", "Steel", "Tiles", "Paint", "Hardware", "Plumbing", "Electrical", "Wood", "Other"];
 const UNITS = ["Bags", "Kg", "Ton", "Sq.ft", "Pieces", "Liters", "Meters", "Boxes"];
 
-export default function MaterialForm({ onSubmit, initialData, onCancel }) {
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm({
-    defaultValues: initialData || {
+type MaterialFormValues = NewRecord<Material>;
+
+interface MaterialFormProps {
+  onSubmit: (data: MaterialFormValues) => void;
+  initialData?: Material;
+  onCancel: () => void;
+}
+
+export default function MaterialForm({ onSubmit, initialData, onCancel }: MaterialFormProps) {
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<MaterialFormValues>({
+    defaultValues: initialData ? {
+      name: initialData.name,
+      category: initialData.category,
+      quantity: initialData.quantity,
+      unit: initialData.unit,
+      min_stock_level: initialData.min_stock_level ?? 0,
+      location: initialData.location ?? ""
+    } : {
       name: "",
       category: "Other",
       quantity: 0,
@@ -29,7 +45,7 @@ export default function MaterialForm({ onSubmit, initialData, onCancel }) {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2 col-span-2">
           <Label htmlFor="name">Material Name</Label>
-          <Input id="name" {...register("name", { required: true })} placeholder="e.g. UltraTech Cement" />
+          <Input id="name" {...register("name", { required: true, validate: v => v.trim() !== "" })} placeholder="e.g. UltraTech Cement" />
           {errors.name && <span className="text-xs text-red-500">Name is required</span>}
         </div>
 
@@ -52,7 +68,8 @@ export default function MaterialForm({ onSubmit, initialData, onCancel }) {
 
         <div className="space-y-2">
           <Label htmlFor="quantity">Quantity</Label>
-          <Input id="quantity" type="number" step="0.01" {...register("quantity", { required: true, min: 0 })} />
+          <Input id="quantity" type="number" step="0.01" {...register("quantity", { required: true, min: 0, valueAsNumber: true })} />
+          {errors.quantity && <span className="text-xs text-red-500">Enter a quantity of 0 or more</span>}
         </div>
 
         <div className="space-y-2">
@@ -69,7 +86,7 @@ export default function MaterialForm({ onSubmit, initialData, onCancel }) {
 
         <div className="space-y-2">
           <Label htmlFor="min_stock_level">Min Stock Alert</Label>
-          <Input id="min_stock_level" type="number" step="0.01" {...register("min_stock_level", { min: 0 })} />
+          <Input id="min_stock_level" type="number" step="0.01" {...register("min_stock_level", { min: 0, setValueAs: v => (v === "" ? 0 : Number(v)) })} />
         </div>
       </div>
 

@@ -1,11 +1,11 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { LayoutDashboard, Hammer, Building2, Menu, X, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Hammer, Building2, Menu, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-export default function Layout({ children }) {
+export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -15,7 +15,7 @@ export default function Layout({ children }) {
     { name: 'Flats & Notes', icon: Building2, page: 'Flats', path: '/Flats' },
   ];
 
-  const isActive = (path) => {
+  const isActive = (path: string) => {
     if (path === '/' && (location.pathname === '/' || location.pathname === '')) return true;
     if (path !== '/' && location.pathname.toLowerCase().startsWith(path.toLowerCase())) return true;
     return false;
@@ -100,3 +100,4 @@ export default function Layout({ children }) {
     </div>
   );
 }
+

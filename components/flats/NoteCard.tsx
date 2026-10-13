@@ -3,23 +3,29 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, CheckCircle2, Clock } from "lucide-react";
-import { format } from 'date-fns';
+import type { WorkNote } from "@/api/base44Client";
 
-const PRIORITY_COLORS = {
+const PRIORITY_COLORS: Record<WorkNote['priority'], string> = {
   Low: "bg-blue-100 text-blue-700",
   Medium: "bg-yellow-100 text-yellow-700",
   High: "bg-orange-100 text-orange-700",
   Critical: "bg-red-100 text-red-700"
 };
 
-const STATUS_ICONS = {
+const STATUS_ICONS: Record<WorkNote['status'], React.ReactNode> = {
   Pending: <Clock className="w-3 h-3" />,
   "In Progress": <Clock className="w-3 h-3 text-blue-500" />,
   Resolved: <CheckCircle2 className="w-3 h-3 text-green-500" />,
   Verified: <CheckCircle2 className="w-3 h-3 text-green-700" />
 };
 
-export default function NoteCard({ note, onEdit, onDelete }) {
+interface NoteCardProps {
+  note: WorkNote;
+  onEdit: (note: WorkNote) => void;
+  onDelete: (id: string) => void;
+}
+
+export default function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
   return (
     <Card className="hover:shadow-md transition-shadow group relative">
       <CardHeader className="p-4 pb-2">
@@ -46,7 +52,7 @@ export default function NoteCard({ note, onEdit, onDelete }) {
           <span>{note.status}</span>
         </div>
         
-        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity absolute right-4 bottom-4 bg-white pl-2">
+        <div className="flex gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity absolute right-4 bottom-4 bg-white pl-2">
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(note)}>
             <Pencil className="w-3.5 h-3.5" />
           </Button>

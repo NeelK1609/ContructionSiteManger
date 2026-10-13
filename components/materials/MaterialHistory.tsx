@@ -1,13 +1,19 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import type { Flat, MaterialTransaction } from "@/api/base44Client";
 import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 
-export default function MaterialHistory({ transactions = [], flats = [] }) {
-  const getFlatNumber = (id) => {
+interface MaterialHistoryProps {
+  transactions?: MaterialTransaction[];
+  flats?: Flat[];
+}
+
+export default function MaterialHistory({ transactions = [], flats = [] }: MaterialHistoryProps) {
+  const getFlatNumber = (id: string) => {
     const flat = flats.find(f => f.id === id);
-    return flat ? `${flat.flat_number} (${flat.block})` : '-';
+    return flat ? `${flat.flat_number}${flat.block ? ` (${flat.block})` : ''}` : '(deleted)';
   };
 
   return (
@@ -25,7 +31,7 @@ export default function MaterialHistory({ transactions = [], flats = [] }) {
           {transactions.map((tx) => (
             <TableRow key={tx.id}>
               <TableCell className="text-xs text-slate-500">
-                {format(new Date(tx.date), 'MMM d, yyyy')}
+                {tx.date ? format(parseISO(tx.date), 'MMM d, yyyy') : '-'}
               </TableCell>
               <TableCell>
                 <Badge 

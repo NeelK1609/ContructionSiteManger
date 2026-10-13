@@ -8,34 +8,55 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import type { Flat, Material, MaterialTransaction, NewRecord } from "@/api/base44Client";
 
-export default function MaterialTransactionForm({ material, flats = [], onSubmit, onCancel }) {
-  const [activeTab, setActiveTab] = React.useState("Usage");
+interface TransactionFormValues {
+  quantity: string;
+  flat_id: string;
+  notes: string;
+  date: string;
+}
+
+interface MaterialTransactionFormProps {
+  material: Material;
+  flats?: Flat[];
+  onSubmit: (data: NewRecord<MaterialTransaction>) => void;
+  onCancel: () => void;
+}
+
+// Local YYYY-MM-DD (toISOString would give the UTC date, which can be off by one)
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+export default function MaterialTransactionForm({ material, flats = [], onSubmit, onCancel }: MaterialTransactionFormProps) {
+  const [activeTab, setActiveTab] = React.useState<"Usage" | "Restock">("Usage");
   
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<TransactionFormValues>({
     defaultValues: {
       quantity: "",
       flat_id: "none",
       notes: "",
-      date: new Date().toISOString().split('T')[0]
+      date: today()
     }
   });
 
   const flatId = watch("flat_id");
 
-  const onFormSubmit = (data) => {
-    // Determine type based on tab (Usage/Wastage vs Restock/Return)
-    // simplified: just pass the tab as type for now, or let user select
-    const transactionType = activeTab; 
-    
+  const onFormSubmit = (data: TransactionFormValues) => {
     onSubmit({
-      ...data,
-      type: transactionType,
+      date: data.date,
+      notes: data.notes,
+      type: activeTab,
       material_id: material.id,
       quantity: Number(data.quantity),
-      flat_id: data.flat_id === "none" ? null : data.flat_id
+      flat_id: activeTab === "Usage" && data.flat_id !== "none" ? data.flat_id : null
     });
   };
+
+  const quantity = Number(watch("quantity")) || 0;
+  const exceedsStock = activeTab === "Usage" && quantity > material.quantity;
 
   return (
     <div className="py-2">
@@ -50,7 +71,7 @@ export default function MaterialTransactionForm({ material, flats = [], onSubmit
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "Usage" | "Restock")} className="w-full mb-6">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="Usage" className="data-[state=active]:bg-red-50 data-[state=active]:text-red-600">
             <ArrowDownCircle className="w-4 h-4 mr-2" /> Log Usage
@@ -62,7 +83,7 @@ export default function MaterialTransactionForm({ material, flats = [], onSubmit
       </Tabs>
 
       <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
             <Input id="date" type="date" {...register("date", { required: true })} />
@@ -76,7 +97,10 @@ export default function MaterialTransactionForm({ material, flats = [], onSubmit
               placeholder="0.00"
               {...register("quantity", { required: true, min: 0.01 })} 
             />
-            {errors.quantity && <span className="text-xs text-red-500">Required</span>}
+            {errors.quantity && <span className="text-xs text-red-500">Enter a quantity greater than 0</span>}
+            {!errors.quantity && exceedsStock && (
+              <span className="text-xs text-amber-600">More than current stock; stock will go negative</span>
+            )}
           </div>
         </div>
 
@@ -91,7 +115,7 @@ export default function MaterialTransactionForm({ material, flats = [], onSubmit
                 <SelectItem value="none">-- General Site Usage --</SelectItem>
                 {flats.map(f => (
                   <SelectItem key={f.id} value={f.id}>
-                    {f.flat_number} (Block {f.block})
+                    {f.flat_number}{f.block ? ` (Block ${f.block})` : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
