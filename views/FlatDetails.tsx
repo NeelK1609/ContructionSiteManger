@@ -1,40 +1,46 @@
+"use client";
+
 import React, { useState } from "react";
-import { base44, type FlatStatus, type NewRecord, type WorkNote } from "@/api/base44Client";
+import { api } from "@/lib/api";
+import type { Flat, FlatStatus, NewRecord, WorkNote } from "@/lib/types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft } from "lucide-react";
-import { Link, useSearchParams } from 'react-router-dom';
+import { Plus, ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
 import { createPageUrl } from '@/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import NoteCard from "@/components/flats/NoteCard";
-import { CATEGORIES as NOTE_CATEGORIES } from "@/components/flats/NoteForm";
+import { NOTE_CATEGORIES } from "@/lib/constants";
 import NoteForm from "@/components/flats/NoteForm";
+import FlatForm from "@/components/flats/FlatForm";
 
 export default function FlatDetailsPage() {
-  const [searchParams] = useSearchParams();
-  const flatId = searchParams.get('id') ?? '';
+  const { id: flatId } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<WorkNote | null>(null);
+  const [isEditFlatOpen, setIsEditFlatOpen] = useState(false);
+  const router = useRouter();
 
   const { data: flat, isLoading: flatLoading } = useQuery({
     queryKey: ['flat', flatId],
-    queryFn: async () => (await base44.entities.Flat.get(flatId)) ?? null,
+    queryFn: () => api.entities.Flat.get(flatId),
     enabled: !!flatId
   });
 
   const { data: notes = [] } = useQuery({
     queryKey: ['notes', 'flat', flatId],
-    queryFn: () => base44.entities.WorkNote.filter({ flat_id: flatId }, '-created_date'),
+    queryFn: () => api.entities.WorkNote.filter({ flat_id: flatId }, '-created_date'),
     enabled: !!flatId,
   });
 
   const invalidateNotes = () => queryClient.invalidateQueries({ queryKey: ['notes'] });
 
   const createMutation = useMutation({
-    mutationFn: (data: NewRecord<WorkNote>) => base44.entities.WorkNote.create(data),
+    mutationFn: (data: NewRecord<WorkNote>) => api.entities.WorkNote.create(data),
     onSuccess: () => {
       invalidateNotes();
       setIsCreateOpen(false);
@@ -42,7 +48,7 @@ export default function FlatDetailsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<NewRecord<WorkNote>> }) => base44.entities.WorkNote.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<NewRecord<WorkNote>> }) => api.entities.WorkNote.update(id, data),
     onSuccess: () => {
       invalidateNotes();
       setEditingNote(null);
@@ -50,15 +56,34 @@ export default function FlatDetailsPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => base44.entities.WorkNote.delete(id),
+    mutationFn: (id: string) => api.entities.WorkNote.delete(id),
     onSuccess: invalidateNotes
   });
 
+  const invalidateFlat = () => {
+    queryClient.invalidateQueries({ queryKey: ['flat', flatId] });
+    queryClient.invalidateQueries({ queryKey: ['flats'] });
+  };
+
   const updateFlatStatusMutation = useMutation({
-    mutationFn: (status: FlatStatus) => base44.entities.Flat.update(flatId, { status }),
+    mutationFn: (status: FlatStatus) => api.entities.Flat.update(flatId, { status }),
+    onSuccess: invalidateFlat
+  });
+
+  const updateFlatMutation = useMutation({
+    mutationFn: (data: Partial<NewRecord<Flat>>) => api.entities.Flat.update(flatId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['flat', flatId] });
+      invalidateFlat();
+      setIsEditFlatOpen(false);
+    }
+  });
+
+  const deleteFlatMutation = useMutation({
+    mutationFn: () => api.entities.Flat.delete(flatId),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['flats'] });
+      invalidateNotes();
+      router.push(createPageUrl('Flats'));
     }
   });
 
@@ -67,14 +92,14 @@ export default function FlatDetailsPage() {
     return (
       <div className="p-8 space-y-4">
         <p>Flat not found.</p>
-        <Link to={createPageUrl('Flats')} className="text-orange-600 hover:underline">Back to Flats</Link>
+        <Link href={createPageUrl('Flats')} className="text-orange-600 hover:underline">Back to Flats</Link>
       </div>
     );
   }
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <Link to={createPageUrl('Flats')} className="inline-flex items-center text-slate-500 hover:text-slate-900 transition-colors">
+      <Link href={createPageUrl('Flats')} className="inline-flex items-center text-slate-500 hover:text-slate-900 transition-colors">
         <ArrowLeft className="w-4 h-4 mr-1" /> Back to Flats
       </Link>
 
@@ -94,6 +119,20 @@ export default function FlatDetailsPage() {
         </div>
         
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="icon" title="Edit flat" onClick={() => setIsEditFlatOpen(true)}>
+            <Pencil className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            title="Delete flat"
+            className="text-red-500 hover:text-red-600"
+            onClick={() => {
+              if (confirm(`Delete flat ${flat.flat_number} and all its work notes?`)) deleteFlatMutation.mutate();
+            }}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
           {flat.status !== 'Completed' && flat.status !== 'Handed Over' && (
              <Button variant="outline" onClick={() => updateFlatStatusMutation.mutate('Completed')}>
                Mark as Completed
@@ -156,6 +195,20 @@ export default function FlatDetailsPage() {
           </TabsContent>
         ))}
       </Tabs>
+
+      <Dialog open={isEditFlatOpen} onOpenChange={setIsEditFlatOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Flat</DialogTitle>
+          </DialogHeader>
+          <FlatForm
+            initialData={flat}
+            onSubmit={(data) => updateFlatMutation.mutate(data)}
+            onCancel={() => setIsEditFlatOpen(false)}
+            isSubmitting={updateFlatMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!editingNote} onOpenChange={(open) => !open && setEditingNote(null)}>
         <DialogContent>

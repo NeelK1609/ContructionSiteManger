@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
-import type { Flat, Material, MaterialTransaction, NewRecord } from "@/api/base44Client";
+import type { Flat, Material, MaterialTransaction, NewRecord } from "@/lib/types";
 
 interface TransactionFormValues {
   quantity: string;

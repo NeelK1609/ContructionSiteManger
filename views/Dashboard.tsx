@@ -1,27 +1,29 @@
+"use client";
+
 import React from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { createPageUrl } from '@/utils';
 import { ArrowRight, Activity, TrendingUp } from "lucide-react";
 
 export default function DashboardPage() {
   const { data: materials = [] } = useQuery({
     queryKey: ['materials'],
-    queryFn: () => base44.entities.Material.list(),
+    queryFn: () => api.entities.Material.list(),
   });
 
   const { data: flats = [] } = useQuery({
     queryKey: ['flats'],
-    queryFn: () => base44.entities.Flat.list(),
+    queryFn: () => api.entities.Flat.list(),
   });
 
   const { data: notes = [] } = useQuery({
     queryKey: ['notes', 'all'],
-    queryFn: () => base44.entities.WorkNote.list('-created_date'),
+    queryFn: () => api.entities.WorkNote.list('-created_date'),
   });
 
   const recentNotes = notes.slice(0, 5);
@@ -44,7 +46,7 @@ export default function DashboardPage() {
               <Activity className="w-5 h-5 text-orange-600" />
               Recent Updates
             </CardTitle>
-            <Link to={createPageUrl('Flats')}>
+            <Link href={createPageUrl('Flats')}>
               <Button variant="ghost" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50">
                 View All <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
@@ -85,7 +87,7 @@ export default function DashboardPage() {
               <TrendingUp className="w-5 h-5 text-red-600" />
               Low Stock Alerts
             </CardTitle>
-            <Link to={createPageUrl('Materials')}>
+            <Link href={createPageUrl('Materials')}>
               <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                 Manage Inventory <ArrowRight className="w-4 h-4 ml-1" />
               </Button>

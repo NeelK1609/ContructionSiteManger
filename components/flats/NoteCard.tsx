@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, CheckCircle2, Clock } from "lucide-react";
-import type { WorkNote } from "@/api/base44Client";
+import type { WorkNote } from "@/lib/types";
 
 const PRIORITY_COLORS: Record<WorkNote['priority'], string> = {
   Low: "bg-blue-100 text-blue-700",

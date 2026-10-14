@@ -5,10 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DialogFooter } from "@/components/ui/dialog";
-import type { Material, NewRecord } from "@/api/base44Client";
-
-const CATEGORIES = ["Cement", "Sand", "Bricks", "Steel", "Tiles", "Paint", "Hardware", "Plumbing", "Electrical", "Wood", "Other"];
-const UNITS = ["Bags", "Kg", "Ton", "Sq.ft", "Pieces", "Liters", "Meters", "Boxes"];
+import type { Material, NewRecord } from "@/lib/types";
+import { MATERIAL_CATEGORIES as CATEGORIES, MATERIAL_UNITS as UNITS } from "@/lib/constants";
 
 type MaterialFormValues = NewRecord<Material>;
 

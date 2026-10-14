@@ -6,11 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DialogFooter } from "@/components/ui/dialog";
-import type { NewRecord, WorkNote } from "@/api/base44Client";
+import type { NewRecord, WorkNote } from "@/lib/types";
 
-export const CATEGORIES = ["Plumbing", "Flooring", "Electrical", "Painting", "Carpentry", "Civil", "Finishing", "Snag List", "Other"];
-const STATUSES: WorkNote['status'][] = ["Pending", "In Progress", "Resolved", "Verified"];
-const PRIORITIES: WorkNote['priority'][] = ["Low", "Medium", "High", "Critical"];
+import { NOTE_CATEGORIES as CATEGORIES, NOTE_PRIORITIES as PRIORITIES, NOTE_STATUSES as STATUSES } from "@/lib/constants";
 
 type NoteFormValues = NewRecord<WorkNote>;
 

@@ -1,0 +1,69 @@
+// Mirrors the JSON schemas in /Entities. Field names stay snake_case so the
+// frontend can use records as-is. Enum-like fields are strings validated in
+// lib/entities.ts against lib/constants.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Pooled connection used by the app at runtime
+  url       = env("DATABASE_URL")
+  // Direct (non-pooled) connection used by migrations
+  directUrl = env("DIRECT_URL")
+}
+
+model Flat {
+  id           String                @id @default(cuid())
+  flat_number  String
+  floor        Int?
+  block        String?
+  status       String                @default("Not Started")
+  owner_name   String?
+  created_date DateTime              @default(now())
+  updated_date DateTime              @updatedAt
+  notes        WorkNote[]
+  transactions MaterialTransaction[]
+}
+
+model Material {
+  id              String                @id @default(cuid())
+  name            String
+  category        String                @default("Other")
+  quantity        Float
+  unit            String                @default("Pieces")
+  min_stock_level Float?
+  location        String?
+  created_date    DateTime              @default(now())
+  updated_date    DateTime              @updatedAt
+  transactions    MaterialTransaction[]
+}
+
+model MaterialTransaction {
+  id           String   @id @default(cuid())
+  material_id  String
+  material     Material @relation(fields: [material_id], references: [id], onDelete: Cascade)
+  type         String   @default("Usage")
+  quantity     Float
+  flat_id      String?
+  flat         Flat?    @relation(fields: [flat_id], references: [id], onDelete: SetNull)
+  notes        String?
+  date         String // YYYY-MM-DD, kept as text so it never shifts across time zones
+  created_date DateTime @default(now())
+  updated_date DateTime @updatedAt
+}
+
+model WorkNote {
+  id           String   @id @default(cuid())
+  flat_id      String
+  flat         Flat     @relation(fields: [flat_id], references: [id], onDelete: Cascade)
+  category     String   @default("Other")
+  title        String
+  description  String?
+  status       String   @default("Pending")
+  priority     String   @default("Medium")
+  image_url    String?
+  created_date DateTime @default(now())
+  updated_date DateTime @updatedAt
+}

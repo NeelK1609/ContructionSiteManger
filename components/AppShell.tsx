@@ -1,23 +1,32 @@
+"use client";
+
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { createPageUrl } from '@/utils';
-import { LayoutDashboard, Hammer, Building2, Menu, ClipboardList } from 'lucide-react';
+import { signOutAction } from '@/app/actions';
+import { LayoutDashboard, Hammer, Building2, Menu, ClipboardList, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
+interface AppShellProps {
+  children: React.ReactNode;
+  user?: { name?: string | null; email?: string | null; image?: string | null };
+}
+
+export default function AppShell({ children, user }: AppShellProps) {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = React.useState(false);
 
   const navItems = [
     { name: 'Dashboard', icon: LayoutDashboard, page: '', path: '/' },
-    { name: 'Materials', icon: Hammer, page: 'Materials', path: '/Materials' },
-    { name: 'Flats & Notes', icon: Building2, page: 'Flats', path: '/Flats' },
+    { name: 'Materials', icon: Hammer, page: 'Materials', path: '/materials' },
+    { name: 'Flats & Notes', icon: Building2, page: 'Flats', path: '/flats' },
   ];
 
   const isActive = (path: string) => {
-    if (path === '/' && (location.pathname === '/' || location.pathname === '')) return true;
-    if (path !== '/' && location.pathname.toLowerCase().startsWith(path.toLowerCase())) return true;
+    if (path === '/') return pathname === '/';
+    return pathname.startsWith(path);
     return false;
   };
 
@@ -37,7 +46,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {navItems.map((item) => (
           <Link
             key={item.path}
-            to={createPageUrl(item.page)}
+            href={createPageUrl(item.page)}
             onClick={() => setIsOpen(false)}
           >
             <div className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
@@ -52,7 +61,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         ))}
       </nav>
 
-      <div className="p-6 border-t border-slate-800">
+      <div className="p-6 border-t border-slate-800 space-y-4">
         <div className="bg-slate-800 rounded-xl p-4">
           <p className="text-xs text-slate-400 mb-1">Project Status</p>
           <div className="flex items-center gap-2">
@@ -60,6 +69,31 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <span className="text-sm font-medium">Active Site</span>
           </div>
         </div>
+        {user && (
+          <div className="flex items-center gap-3">
+            {user.image ? (
+              <img src={user.image} alt="" className="w-9 h-9 rounded-full" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-sm font-medium">
+                {(user.name ?? user.email ?? '?').charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{user.name ?? user.email}</p>
+              {user.name && <p className="text-xs text-slate-400 truncate">{user.email}</p>}
+            </div>
+            <form action={signOutAction}>
+              <button
+                type="submit"
+                title="Sign out"
+                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="sr-only">Sign out</span>
+              </button>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );

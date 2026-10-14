@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Flat, Material, WorkNote } from "@/api/base44Client";
+import type { Flat, Material, WorkNote } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Package, ClipboardList, AlertTriangle, CheckCircle2 } from "lucide-react";
 

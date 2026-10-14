@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import MaterialForm from "./MaterialForm";
 import MaterialTransactionForm from "./MaterialTransactionForm";
 import { History } from "lucide-react";
-import type { Flat, Material, MaterialTransaction, NewRecord } from "@/api/base44Client";
+import type { Flat, Material, MaterialTransaction, NewRecord } from "@/lib/types";
 
 interface MaterialListProps {
   materials: Material[];

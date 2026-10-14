@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
-import { base44, type Material, type MaterialTransaction, type NewRecord } from "@/api/base44Client";
+import { api } from "@/lib/api";
+import type { Material, MaterialTransaction, NewRecord } from "@/lib/types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -15,24 +18,24 @@ export default function MaterialsPage() {
 
   const { data: materials = [], isLoading } = useQuery({
     queryKey: ['materials'],
-    queryFn: () => base44.entities.Material.list('name'),
+    queryFn: () => api.entities.Material.list('name'),
   });
 
   const { data: flats = [] } = useQuery({
     queryKey: ['flats'],
-    queryFn: () => base44.entities.Flat.list('flat_number'),
+    queryFn: () => api.entities.Flat.list('flat_number'),
   });
 
   const { data: historyTransactions = [], isLoading: historyLoading } = useQuery({
     queryKey: ['material_history', historyMaterial?.id],
-    queryFn: () => base44.entities.MaterialTransaction.filter({ material_id: historyMaterial!.id }, '-date'),
+    queryFn: () => api.entities.MaterialTransaction.filter({ material_id: historyMaterial!.id }, '-date'),
     enabled: !!historyMaterial,
   });
 
   const invalidateMaterials = () => queryClient.invalidateQueries({ queryKey: ['materials'] });
 
   const createMutation = useMutation({
-    mutationFn: (data: NewRecord<Material>) => base44.entities.Material.create(data),
+    mutationFn: (data: NewRecord<Material>) => api.entities.Material.create(data),
     onSuccess: () => {
       invalidateMaterials();
       setIsCreateOpen(false);
@@ -40,28 +43,18 @@ export default function MaterialsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<NewRecord<Material>> }) => base44.entities.Material.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<NewRecord<Material>> }) => api.entities.Material.update(id, data),
     onSuccess: invalidateMaterials
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => base44.entities.Material.delete(id),
+    mutationFn: (id: string) => api.entities.Material.delete(id),
     onSuccess: invalidateMaterials
   });
 
   const transactionMutation = useMutation({
-    mutationFn: async (data: NewRecord<MaterialTransaction>) => {
-      // Read the latest stock rather than the cached list so quantities never drift
-      const material = await base44.entities.Material.get(data.material_id);
-      if (!material) throw new Error('Material not found');
-
-      // 1. Create the transaction record
-      await base44.entities.MaterialTransaction.create(data);
-
-      // 2. Update the parent material quantity
-      const delta = ['Usage', 'Wastage'].includes(data.type) ? -data.quantity : data.quantity;
-      await base44.entities.Material.update(material.id, { quantity: material.quantity + delta });
-    },
+    // The server records the transaction and adjusts the material's stock atomically
+    mutationFn: (data: NewRecord<MaterialTransaction>) => api.entities.MaterialTransaction.create(data),
     onSuccess: (_, variables) => {
       invalidateMaterials();
       queryClient.invalidateQueries({ queryKey: ['material_history', variables.material_id] });

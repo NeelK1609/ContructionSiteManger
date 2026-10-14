@@ -1,10 +1,9 @@
 import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import Link from 'next/link';
 import { ChevronRight } from "lucide-react";
-import type { Flat, FlatStatus } from "@/api/base44Client";
+import type { Flat, FlatStatus } from "@/lib/types";
 
 const statusColors: Record<FlatStatus, string> = {
   "Not Started": "bg-slate-100 text-slate-600",
@@ -17,7 +16,7 @@ const statusColors: Record<FlatStatus, string> = {
 export default function FlatCard({ flat, issueCount }: { flat: Flat; issueCount: number }) {
 
   return (
-    <Link to={createPageUrl(`FlatDetails?id=${flat.id}`)} className="block">
+    <Link href={`/flats/${flat.id}`} className="block">
       <Card className="hover:shadow-lg transition-all duration-300 hover:border-orange-200 cursor-pointer overflow-hidden group">
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
