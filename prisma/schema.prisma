@@ -67,3 +67,65 @@ model WorkNote {
   created_date DateTime @default(now())
   updated_date DateTime @updatedAt
 }
+
+// ---- Access control ----
+
+// People allowed to sign in, managed from the Team page. Admins come from the
+// ADMIN_EMAILS env var instead, so they can never be removed by accident.
+model AllowedUser {
+  email        String   @id
+  added_by     String?
+  created_date DateTime @default(now())
+}
+
+// ---- Auth.js tables (used by @auth/prisma-adapter) ----
+// Sessions are JWT cookies, but magic links need VerificationToken and the
+// adapter records which sign-in methods each person has used.
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}

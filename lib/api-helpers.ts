@@ -2,12 +2,13 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
-import { auth, isAllowedEmail } from '@/auth';
+import { auth } from '@/auth';
+import { isAllowedEmail } from '@/lib/access';
 
 /** Returns a 401 response unless the caller is signed in with an allowed email. */
 export async function requireUser(): Promise<NextResponse | null> {
   const session = await auth();
-  if (!isAllowedEmail(session?.user?.email)) {
+  if (!(await isAllowedEmail(session?.user?.email))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   return null;

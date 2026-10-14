@@ -1,4 +1,6 @@
-# Local Postgres for development: `docker compose up -d`
+# Local services for development: `docker compose up -d`
+#   Postgres on :5432
+#   Mailpit test inbox: catches sign-in emails, view them at http://localhost:8025
 services:
   db:
     image: postgres:16-alpine
@@ -11,6 +13,13 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+  mail:
+    image: axllent/mailpit:v1.21
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # web inbox
 
 volumes:
   pgdata:

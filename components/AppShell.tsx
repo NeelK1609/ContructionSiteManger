@@ -5,16 +5,17 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createPageUrl } from '@/utils';
 import { signOutAction } from '@/app/actions';
-import { LayoutDashboard, Hammer, Building2, Menu, ClipboardList, LogOut } from 'lucide-react';
+import { LayoutDashboard, Hammer, Building2, Menu, ClipboardList, LogOut, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 interface AppShellProps {
   children: React.ReactNode;
   user?: { name?: string | null; email?: string | null; image?: string | null };
+  isAdmin?: boolean;
 }
 
-export default function AppShell({ children, user }: AppShellProps) {
+export default function AppShell({ children, user, isAdmin }: AppShellProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -22,6 +23,7 @@ export default function AppShell({ children, user }: AppShellProps) {
     { name: 'Dashboard', icon: LayoutDashboard, page: '', path: '/' },
     { name: 'Materials', icon: Hammer, page: 'Materials', path: '/materials' },
     { name: 'Flats & Notes', icon: Building2, page: 'Flats', path: '/flats' },
+    ...(isAdmin ? [{ name: 'Team', icon: Users, page: 'Team', path: '/team' }] : []),
   ];
 
   const isActive = (path: string) => {

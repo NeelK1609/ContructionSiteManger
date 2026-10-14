@@ -1,36 +1,51 @@
 import NextAuth from 'next-auth';
+import type { Provider } from 'next-auth/providers';
 import Google from 'next-auth/providers/google';
+import Nodemailer from 'next-auth/providers/nodemailer';
+import { PrismaAdapter } from '@auth/prisma-adapter';
+import { prisma } from '@/lib/db';
+import { isAllowedEmail } from '@/lib/access';
+import { authConfig } from './auth.config';
 
-/**
- * Only Google accounts listed in ALLOWED_EMAILS (comma-separated) may use the app.
- * Checked at sign-in, and again by app/(app)/layout.tsx, the login page and the
- * API on every request, so removing an email locks that person out on their next
- * page load (after a server restart).
- */
-export function isAllowedEmail(email?: string | null): boolean {
-  if (!email) return false;
-  const allowed = (process.env.ALLOWED_EMAILS ?? '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  return allowed.includes(email.toLowerCase());
+// Each sign-in method is enabled only when its settings are present
+export const enabledProviders = {
+  google: !!(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET),
+  email: !!(process.env.EMAIL_SERVER && process.env.EMAIL_FROM),
+};
+
+const providers: Provider[] = [];
+
+if (enabledProviders.google) {
+  providers.push(
+    Google({
+      // Google verifies email ownership, so it's safe to link a Google sign-in
+      // to an account that first signed in by magic link with the same email
+      allowDangerousEmailAccountLinking: true,
+    })
+  );
+}
+
+if (enabledProviders.email) {
+  providers.push(
+    Nodemailer({
+      server: process.env.EMAIL_SERVER,
+      from: process.env.EMAIL_FROM,
+      maxAge: 15 * 60, // magic links expire after 15 minutes
+    })
+  );
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [Google],
-  pages: {
-    signIn: '/login',
-    error: '/login',
-  },
+  ...authConfig,
+  adapter: PrismaAdapter(prisma),
+  providers,
   callbacks: {
-    signIn({ profile }) {
-      return profile?.email_verified === true && isAllowedEmail(profile.email);
-    },
-    // Middleware only checks that someone is signed in. The allowlist is enforced in
-    // the Node runtime (layout, login page, API) because the Edge middleware can hold
-    // stale env values after .env changes, and a mismatch would cause a redirect loop.
-    authorized({ auth }) {
-      return !!auth?.user;
+    ...authConfig.callbacks,
+    // Runs before a magic link is sent and again on every sign-in, so emails
+    // only ever go to approved addresses
+    async signIn({ user, account, profile }) {
+      if (account?.provider === 'google' && profile?.email_verified !== true) return false;
+      return isAllowedEmail(user.email ?? profile?.email);
     },
   },
 });
